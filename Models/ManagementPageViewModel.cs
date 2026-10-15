@@ -7,5 +7,6 @@ public sealed class ManagementPageViewModel
     public IReadOnlyList<Dictionary<string, string>> Rows { get; init; } = [];
     public Dictionary<string, string> FormValues { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public string? Error { get; init; }
+    public IReadOnlyDictionary<string, IReadOnlyList<CrmOption>> CrmOptions { get; init; } = new Dictionary<string, IReadOnlyList<CrmOption>>();
     public bool Saved { get; init; }
 }

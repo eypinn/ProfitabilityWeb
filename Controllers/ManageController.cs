@@ -8,7 +8,7 @@ using ProfitabilityWeb.Services;
 namespace ProfitabilityWeb.Controllers;
 
 [Route("manage")]
-public sealed class ManageController(IManagementApiClient api) : Controller
+public sealed class ManageController(IManagementApiClient api, ICrmReferenceClient crm) : Controller
 {
     private static readonly Dictionary<string, string[]> FieldMap = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -34,7 +34,7 @@ public sealed class ManageController(IManagementApiClient api) : Controller
         return View(new ManagementPageViewModel
         {
             Entity = entity, Title = Titles[entity], Fields = fields,
-            Rows = rows, Error = error, Saved = TempData["Saved"] is true
+            Rows = rows, Error = error, CrmOptions = await GetCrmOptionsAsync(entity, ct), Saved = TempData["Saved"] is true
         });
     }
 
@@ -70,6 +70,15 @@ public sealed class ManageController(IManagementApiClient api) : Controller
             }
             else body[field] = value;
         }
+        if (entity == "productsegments" && !await IsValidCrmValueAsync("segments", values.GetValueOrDefault("SegmentCode"), ct))
+            return await InvalidAsync(entity, fields, values, "CRM üzerinde tanımlı bir segment seçilmelidir.", ct);
+        if (entity == "transactions")
+        {
+            if (!await IsValidCrmValueAsync("portfolios", values.GetValueOrDefault("PortfolioCode"), ct))
+                return await InvalidAsync(entity, fields, values, "CRM üzerinde tanımlı bir portföy seçilmelidir.", ct);
+            if (!await IsValidCrmValueAsync("customers", values.GetValueOrDefault("CustomerCode"), ct))
+                return await InvalidAsync(entity, fields, values, "CRM üzerinde tanımlı bir müşteri seçilmelidir.", ct);
+        }
         // TransactionId is database-generated for new transactions.
         if (entity.Equals("transactions", StringComparison.OrdinalIgnoreCase) &&
             (!values.TryGetValue("TransactionId", out var id) || string.IsNullOrWhiteSpace(id)))
@@ -99,7 +108,33 @@ public sealed class ManageController(IManagementApiClient api) : Controller
         Response.StatusCode = 400;
         return View("Index", new ManagementPageViewModel
         { Entity = entity, Title = Titles[entity], Fields = fields,
-           Rows = rows, FormValues = values, Error = error });
+           Rows = rows, FormValues = values, CrmOptions = await GetCrmOptionsAsync(entity, ct), Error = error });
+    }
+
+    private async Task<bool> IsValidCrmValueAsync(string entity, string? code, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return false;
+        try { return (await crm.GetOptionsAsync(entity, ct)).Any(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase)); }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException) { return false; }
+    }
+
+    private async Task<IReadOnlyDictionary<string, IReadOnlyList<CrmOption>>> GetCrmOptionsAsync(string entity, CancellationToken ct)
+    {
+        var entities = entity switch
+        {
+            "productsegments" => new[] { "segments" },
+            "transactions" => new[] { "portfolios", "customers", "employees" },
+            "transactionexceptions" => new[] { "portfolios", "customers", "employees", "segments" },
+            _ => Array.Empty<string>()
+        };
+        var result = new Dictionary<string, IReadOnlyList<CrmOption>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in entities)
+        {
+            try { result[name] = await crm.GetOptionsAsync(name, ct); }
+            catch (Exception ex) when (ex is HttpRequestException or JsonException)
+            { result[name] = []; }
+        }
+        return result;
     }
 
     private async Task<(List<Dictionary<string, string>> Rows, string? Error)> LoadAsync(string entity, CancellationToken ct)

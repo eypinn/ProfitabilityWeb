@@ -3,6 +3,10 @@
 <div class="page-heading"><div><p class="eyebrow">TANIM VE İŞLEM YÖNETİMİ</p><h1>@Model.Title</h1><p class="muted">@Model.Rows.Count kayıt listeleniyor.</p></div><a class="btn secondary" href="/">← Panele dön</a></div>
 @if (Model.Saved) { <div class="notice success">Kayıt API'ye başarıyla gönderildi.</div> }
 @if (!string.IsNullOrWhiteSpace(Model.Error)) { <div class="notice error">@Model.Error</div> }
+@if (Model.Entity == "transactionexceptions")
+{
+    <div class="notice">İstisna kaydı TransactionId üzerinden mevcut işleme bağlanır. Portföy, müşteri, çalışan ve segment bilgileri CRM'de yönetilir; işlem seçimiyle dolaylı ilişkilidir.</div>
+}
 <section class="panel">
     <h2>Yeni kayıt</h2>
     <form method="post" action="/manage/@Model.Entity/save" class="entry-form">
@@ -14,7 +18,21 @@
             var isNumeric = field is "TransactionId" or "BranchId" or "CustomerCode" or "Multiplier" or "YPProfit" or "TLProfit" or "OverrideYPProfit" or "OverrideTLProfit";
             var inputType = isDate ? "date" : isNumeric ? "number" : "text";
             var value = Model.FormValues.TryGetValue(field, out var existing) ? existing : "";
-            <label class="field"><span>@field</span><input name="@field" type="@inputType" step="@(isNumeric ? "any" : null)" value="@value" placeholder="@field" /></label>
+            <label class="field"><span>@field</span>
+            @if ((field == "SegmentCode" && Model.Entity == "productsegments") || (field == "PortfolioCode" && Model.Entity == "transactions") || (field == "CustomerCode" && Model.Entity == "transactions"))
+            {
+                var source = field == "SegmentCode" ? "segments" : field == "PortfolioCode" ? "portfolios" : "customers";
+                var options = Model.CrmOptions.TryGetValue(source, out var loaded) ? loaded : Array.Empty<CrmOption>();
+                <select name="@field" required disabled="@(options.Count == 0)">
+                    <option value="">@(options.Count == 0 ? "CRM verisi alınamadı" : "Seçiniz")</option>
+                    @foreach (var option in options)
+                    {
+                        <option value="@option.Code" selected="@(value == option.Code)">@option.Label</option>
+                    }
+                </select>
+            }
+            else { <input name="@field" type="@inputType" step="@(isNumeric ? "any" : null)" value="@value" placeholder="@field" /> }
+            </label>
         }
         </div>
         <div class="actions"><button class="btn primary" type="submit">Kaydet</button><span class="muted">Kayıtlar API servisi üzerinden işlenir.</span></div>
@@ -25,7 +43,12 @@
 <tbody>
 @foreach (var row in Model.Rows)
 {
-    <tr>@foreach (var field in Model.Fields) { <td>@(row.TryGetValue(field, out var value) ? value : "—")</td> }</tr>
+    <tr>@foreach (var field in Model.Fields) { <td>@{
+    var cell = row.TryGetValue(field, out var cellValue) ? cellValue : "—";
+    var source = field == "SegmentCode" ? "segments" : field == "PortfolioCode" ? "portfolios" : field == "CustomerCode" ? "customers" : "";
+    var display = source.Length > 0 && Model.CrmOptions.TryGetValue(source, out var choices)
+        ? choices.FirstOrDefault(x => x.Code == cell)?.Label ?? cell : cell;
+}<span>@display</span></td> }</tr>
 }
 @if (Model.Rows.Count == 0) { <tr><td colspan="@Model.Fields.Count" class="empty">Henüz kayıt bulunmuyor.</td></tr> }
 </tbody></table></div></section>
