@@ -1,0 +1,31 @@
+@model ManagementPageViewModel
+@{ ViewData["Title"] = Model.Title; }
+<div class="page-heading"><div><p class="eyebrow">TANIM VE İŞLEM YÖNETİMİ</p><h1>@Model.Title</h1><p class="muted">@Model.Rows.Count kayıt listeleniyor.</p></div><a class="btn secondary" href="/">← Panele dön</a></div>
+@if (Model.Saved) { <div class="notice success">Kayıt API'ye başarıyla gönderildi.</div> }
+@if (!string.IsNullOrWhiteSpace(Model.Error)) { <div class="notice error">@Model.Error</div> }
+<section class="panel">
+    <h2>Yeni kayıt</h2>
+    <form method="post" action="/manage/@Model.Entity/save" class="entry-form">
+        @Html.AntiForgeryToken()
+        <div class="fields">
+        @foreach (var field in Model.Fields)
+        {
+            var isDate = field.EndsWith("Date", StringComparison.OrdinalIgnoreCase);
+            var isNumeric = field is "TransactionId" or "BranchId" or "CustomerCode" or "Multiplier" or "YPProfit" or "TLProfit" or "OverrideYPProfit" or "OverrideTLProfit";
+            var inputType = isDate ? "date" : isNumeric ? "number" : "text";
+            var value = Model.FormValues.TryGetValue(field, out var existing) ? existing : "";
+            <label class="field"><span>@field</span><input name="@field" type="@inputType" step="@(isNumeric ? "any" : null)" value="@value" placeholder="@field" /></label>
+        }
+        </div>
+        <div class="actions"><button class="btn primary" type="submit">Kaydet</button><span class="muted">Kayıtlar API servisi üzerinden işlenir.</span></div>
+    </form>
+</section>
+<section class="panel"><div class="panel-heading"><h2>Mevcut kayıtlar</h2><span class="count">@Model.Rows.Count kayıt</span></div>
+<div class="table-wrap"><table><thead><tr>@foreach (var field in Model.Fields) { <th>@field</th> }</tr></thead>
+<tbody>
+@foreach (var row in Model.Rows)
+{
+    <tr>@foreach (var field in Model.Fields) { <td>@(row.TryGetValue(field, out var value) ? value : "—")</td> }</tr>
+}
+@if (Model.Rows.Count == 0) { <tr><td colspan="@Model.Fields.Count" class="empty">Henüz kayıt bulunmuyor.</td></tr> }
+</tbody></table></div></section>

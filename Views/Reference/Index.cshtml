@@ -1,0 +1,7 @@
+@model ReferencePageViewModel
+@{ ViewData["Title"] = "CRM Referansları"; }
+<div class="page-heading"><div><p class="eyebrow">SİSTEMLER ARASI ENTEGRASYON</p><h1>CRM Referans Verileri</h1><p class="muted">CRM API servisinden alınan kaynak veriler.</p></div><a class="btn secondary" href="/">← Panele dön</a></div>
+@foreach (var entry in Model.Responses)
+{
+    <section class="panel"><h2>@entry.Key</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">@entry.Value</pre></section>
+}

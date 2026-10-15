@@ -1,0 +1,9 @@
+@model DashboardViewModel
+@{ ViewData["Title"] = Model.ApplicationName; }
+<section class="hero"><p class="eyebrow">BANKBI / YÖNETİM PANELİ</p><h1>@Model.ApplicationName</h1><p>İş birimi tanımlarını ve operasyonel kayıtları buradan yönetebilirsiniz.</p></section>
+<div class="cards">
+@foreach (var page in Model.Pages)
+{
+    <a class="tile" href="@(page.Path)"><span class="tile-icon">↗</span><h2>@(page.Title)</h2><p>@(page.Description)</p><span class="tile-link">Ekranı aç →</span></a>
+}
+</div>

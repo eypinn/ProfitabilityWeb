@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] — BankBI</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="topbar"><a class="brand" href="/">BankBI</a><nav><a href="/">Ana Sayfa</a><a href="javascript:history.back()">Geri</a></nav></header>
+    <main class="container">@RenderBody()</main>
+    <footer>BankBI • .NET 10 • ASP.NET Core MVC</footer>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
